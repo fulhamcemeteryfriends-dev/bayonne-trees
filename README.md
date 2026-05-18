@@ -9,7 +9,7 @@ and other volunteer organisations to catalogue and share.
   your GitHub repository.
 - **No coding** required. No terminal. Five steps and you're live.
 
-![Screenshot placeholder — replace with a screenshot of your live map](docs/screenshot.png)
+![Screenshot](docs/treemap-screenshot.png)
 
 ## What you'll need
 
