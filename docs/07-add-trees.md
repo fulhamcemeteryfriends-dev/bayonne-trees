@@ -45,6 +45,19 @@ there.
 > latitude and longitude are copied to your clipboard, ready to paste into
 > the two cells.
 
+## Keeping the sheet sorted
+
+The Apps Script re-sorts the sheet by Scientific name automatically every
+time someone adds a tree via the **"+ Add a tree"** button in the map.
+
+If you add or edit rows **directly in the spreadsheet**, the sort won't
+update on its own. To put everything back in order:
+
+1. Click any cell in the data.
+2. **Data → Sort sheet → Sort sheet by column C (Scientific name) → A → Z.**
+
+That's it — two clicks and the sheet is tidy again.
+
 ## Editing trees
 
 Just edit the spreadsheet. There's no "edit" mode in the map itself.

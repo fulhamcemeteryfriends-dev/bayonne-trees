@@ -98,6 +98,14 @@ the formula has been overwritten somewhere. Fix:
 
 If even row 2 is broken, copy the formula from the original template sheet.
 
+## Keeping the sheet sorted
+
+The sheet is much easier to read when it's sorted by Scientific name. The
+Apps Script does this automatically every time a tree is added via the
+map's *"+ Add a tree"* button. If you ever paste rows or edit names
+**directly in the spreadsheet**, click any data cell and use **Data → Sort
+sheet → Sort sheet by column C (Scientific name) → A → Z** to tidy it up.
+
 ## Adding columns of your own
 
 If you want to track something the template doesn't have — say, *Sponsor* or
