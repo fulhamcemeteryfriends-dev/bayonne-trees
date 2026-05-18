@@ -54,6 +54,23 @@ The `Tags` column understands a few values specially:
 All of these are case-insensitive and based on whole-word matching, so
 `Renewed` won't accidentally match `New`.
 
+## Case-insensitive merging
+
+The `Tags`, `Condition`, and `Form` columns are compared case-insensitively
+throughout the app:
+
+- `Native`, `native`, and `NATIVE` count as the **same tag**. The filter
+  panel shows one row using the **first capitalisation it sees** in the
+  spreadsheet.
+- Same for `Good` / `good`, `Standard` / `standard`, and so on.
+- The original casing is preserved in the spreadsheet and in the popup pill
+  for each tree — so a tree typed as `native` still shows `native` in its
+  popup; only the filter row merges them.
+- The `Ref`, `Scientific name`, `Common name`, `Short name`, and `Photos`
+  columns are **not** case-folded — they're matched exactly. (Scientific
+  names in particular should always use the standard capitalisation, e.g.
+  `Quercus robur`, never `quercus robur`.)
+
 ## Photos
 
 The `Photos` column accepts a comma-separated list of values. Two forms work:

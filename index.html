@@ -1025,17 +1025,17 @@
   }
 
   function makeIcon(tree, colour) {
-    const tags = parseTags(tree['Tags']);
-    const condition = (tree['Condition'] || '').trim();
+    const tagKeys = parseTags(tree['Tags']).map(tagKey);
+    const condKey = tagKey(tree['Condition']);
 
     let svg, anchorY = 12;
-    if (condition === 'Dead') {
+    if (condKey === 'dead') {
       svg = squareIcon('#888888');
-    } else if (tags.includes('TBC')) {
+    } else if (tagKeys.includes('tbc')) {
       svg = questionIcon();
-    } else if (tags.includes('Highlight')) {
+    } else if (tagKeys.includes('highlight')) {
       svg = starIcon(colour);
-    } else if (tags.some(isNewTag)) {
+    } else if (tagKeys.some(t => /\bnew\b/.test(t))) {
       svg = diamondIcon(colour);
     } else {
       svg = circleIcon(colour);
@@ -1051,9 +1051,12 @@
   }
 
   // ── HELPERS ──────────────────────────────────────────────────────────────────
+  // Hash the normalised key so case variants of the same tag (e.g. `Native`
+  // and `native`) get the same pill colour.
   function tagHue(tag) {
+    const s = tagKey(tag);
     let h = 0;
-    for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0xffff;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffff;
     return h % 360;
   }
 
@@ -1065,6 +1068,14 @@
   function parseTags(tagStr) {
     if (!tagStr) return [];
     return tagStr.split(',').map(t => t.trim()).filter(Boolean);
+  }
+
+  // Normalised key for case-insensitive matching of tags, conditions and forms.
+  // The original casing is preserved everywhere it's *displayed* (popup pills,
+  // filter labels, spreadsheet values) — `tagKey` is only used as a comparison
+  // and bucketing key so e.g. `Native` and `native` merge into one filter row.
+  function tagKey(s) {
+    return String(s || '').trim().toLowerCase();
   }
 
   // For Google-Photos-style URLs (host googleusercontent.com), strip any existing
@@ -1194,22 +1205,32 @@
 
   function buildFilters(trees) {
     const sciCounts = {}, commonCounts = {}, shortCounts = {};
-    const tagCounts = {}, newTagCounts = {}, condCounts = {}, formCounts = {};
+    // Tag/Condition/Form buckets are keyed case-insensitively. Each entry
+    // tracks the first-seen display form so e.g. `Native` and `native` merge
+    // into a single filter row that still reads "Native".
+    const tagBuckets    = {};   // key -> { display, count }
+    const newTagBuckets = {};
+    const condBuckets   = {};
+    const formBuckets   = {};
+
+    const bump = (buckets, value) => {
+      const k = tagKey(value);
+      if (!k) return;
+      if (!buckets[k]) buckets[k] = { display: value, count: 0 };
+      buckets[k].count++;
+    };
 
     for (const tree of trees) {
       const sci   = tree['Scientific name'];
       const com   = tree['Common name'];
       const short = tree['Short name'];
-      const cond  = tree['Condition'];
-      const form  = tree['Form'];
       if (sci)   sciCounts[sci]     = (sciCounts[sci]     || 0) + 1;
       if (com)   commonCounts[com]  = (commonCounts[com]  || 0) + 1;
       if (short) shortCounts[short] = (shortCounts[short] || 0) + 1;
-      if (cond)  condCounts[cond]   = (condCounts[cond]   || 0) + 1;
-      if (form)  formCounts[form]   = (formCounts[form]   || 0) + 1;
+      if (tree['Condition']) bump(condBuckets, tree['Condition']);
+      if (tree['Form'])      bump(formBuckets, tree['Form']);
       for (const tag of parseTags(tree['Tags'])) {
-        if (isNewTag(tag)) newTagCounts[tag] = (newTagCounts[tag] || 0) + 1;
-        else               tagCounts[tag]    = (tagCounts[tag]    || 0) + 1;
+        bump(isNewTag(tag) ? newTagBuckets : tagBuckets, tag);
       }
     }
 
@@ -1225,18 +1246,25 @@
       }
     };
 
-    const fillCheckboxes = (id, counts, cls) => {
+    // Renders one checkbox per bucket. cb.value is the lowercase key so
+    // filtering and URL params are case-insensitive; the label shows the
+    // first-seen display form so users see polished casing like "Native".
+    const fillCheckboxes = (id, buckets, cls) => {
       const div = document.getElementById(id);
-      for (const [val, count] of Object.entries(counts).sort()) {
+      const entries = Object.entries(buckets).sort((a, b) =>
+        a[1].display.localeCompare(b[1].display, undefined, { sensitivity: 'base' })
+      );
+      for (const [key, { display, count }] of entries) {
         const lbl = document.createElement('label');
         lbl.className = 'checkbox-item';
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.className = cls;
-        cb.value = val;
+        cb.value = key;
+        cb.dataset.display = display;
         cb.addEventListener('change', applyFilters);
         lbl.appendChild(cb);
-        lbl.appendChild(document.createTextNode(` ${val} (${count})`));
+        lbl.appendChild(document.createTextNode(` ${display} (${count})`));
         div.appendChild(lbl);
       }
     };
@@ -1244,21 +1272,22 @@
     fillSelect('filter-sci', sciCounts);
     fillSelect('filter-common', commonCounts);
     fillSelect('filter-short', shortCounts);
-    fillCheckboxes('filter-new-tags', newTagCounts, 'filter-tag');
-    fillCheckboxes('filter-tags',     tagCounts,    'filter-tag');
-    fillCheckboxes('filter-conditions', condCounts, 'filter-condition');
-    fillCheckboxes('filter-forms',      formCounts, 'filter-form');
+    fillCheckboxes('filter-new-tags',   newTagBuckets, 'filter-tag');
+    fillCheckboxes('filter-tags',       tagBuckets,    'filter-tag');
+    fillCheckboxes('filter-conditions', condBuckets,   'filter-condition');
+    fillCheckboxes('filter-forms',      formBuckets,   'filter-form');
 
+    // Insert "Non-native (hide)" filter after the Native checkbox, and a
+    // "Hide self-sown" filter after the Self-sown checkbox.
     const nonNativeCount = trees.filter(t => {
-      const tags = (t['Tags'] || '').split(',').map(s => s.trim()).filter(Boolean);
+      const tags = parseTags(t['Tags']);
       return !tags.some(tag => /\bnative\b/i.test(tag));
     }).length;
-    // Insert Non-native checkbox directly after the Native checkbox
     const selfSownCb = [...document.querySelectorAll('#filter-tags .filter-tag')]
       .find(cb => /\bself.sown\b/i.test(cb.value));
     if (selfSownCb) {
       const hideSelfSownCount = trees.filter(t => {
-        const tags = (t['Tags'] || '').split(',').map(s => s.trim()).filter(Boolean);
+        const tags = parseTags(t['Tags']);
         return !tags.some(tag => /\bself.sown\b/i.test(tag));
       }).length;
       const lbl = document.createElement('label');
@@ -1338,11 +1367,11 @@
     if (commonFilter && tree['Common name']     !== commonFilter) return false;
     if (shortFilter  && tree['Short name']      !== shortFilter)  return false;
     if (checkedTags.length) {
-      const treeTags = parseTags(tree['Tags']);
-      if (!checkedTags.some(t => treeTags.includes(t))) return false;
+      const treeTagKeys = parseTags(tree['Tags']).map(tagKey);
+      if (!checkedTags.some(t => treeTagKeys.includes(t))) return false;
     }
-    if (checkedConds.length && !checkedConds.includes(tree['Condition'])) return false;
-    if (checkedForms.length && !checkedForms.includes(tree['Form']))      return false;
+    if (checkedConds.length && !checkedConds.includes(tagKey(tree['Condition']))) return false;
+    if (checkedForms.length && !checkedForms.includes(tagKey(tree['Form'])))      return false;
     if (document.getElementById('filter-photo').checked    &&  !tree['Photos']) return false;
     if (document.getElementById('filter-no-photo').checked &&   tree['Photos']) return false;
     if (document.getElementById('filter-hide-self-sown')?.checked) {
@@ -1428,15 +1457,15 @@
     const common = params.get('common'); if (common) document.getElementById('filter-common').value = common;
     const short  = params.get('short');  if (short)  document.getElementById('filter-short').value  = short;
     if (params.has('tags')) {
-      const tags = params.get('tags').split(',');
+      const tags = params.get('tags').split(',').map(tagKey);
       document.querySelectorAll('.filter-tag').forEach(cb => { if (tags.includes(cb.value)) cb.checked = true; });
     }
     if (params.has('cond')) {
-      const conds = params.get('cond').split(',');
+      const conds = params.get('cond').split(',').map(tagKey);
       document.querySelectorAll('.filter-condition').forEach(cb => { if (conds.includes(cb.value)) cb.checked = true; });
     }
     if (params.has('form')) {
-      const forms = params.get('form').split(',');
+      const forms = params.get('form').split(',').map(tagKey);
       document.querySelectorAll('.filter-form').forEach(cb => { if (forms.includes(cb.value)) cb.checked = true; });
     }
     if (params.get('photo')     === '1') document.getElementById('filter-photo').checked     = true;
