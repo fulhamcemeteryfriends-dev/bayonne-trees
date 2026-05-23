@@ -837,7 +837,7 @@
       </select>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section" id="filter-section-months" style="display:none">
       <span class="filter-label">Seasonal interest</span>
       <div class="month-grid" id="filter-months"></div>
     </div>
@@ -1292,6 +1292,11 @@
     html += row('Condition',        tree['Condition']);
     html += row('Notes',            tree['Notes']);
 
+    const monthVals = (tree['Months (Seasonal interest)'] || '').split(',').map(m => m.trim()).filter(Boolean);
+    if (monthVals.length) {
+      html += `<div class="prop"><b>Seasonal interest:</b> <span>${esc(monthVals.join(', '))}</span></div>`;
+    }
+
     const tags = parseTags(tree['Tags']);
     if (tags.length) html += `<div class="prop"><b>Tags:</b><div class="tag-pills">${tags.map(tagPill).join('')}</div></div>`;
     html += row('Ref',              tree['Ref']);
@@ -1406,6 +1411,13 @@
     fillCheckboxes('filter-tags',       tagBuckets,    'filter-tag');
     fillCheckboxes('filter-conditions', condBuckets,   'filter-condition');
     fillCheckboxes('filter-forms',      formBuckets,   'filter-form');
+
+    // Show the Seasonal interest filter only if at least one tree has a
+    // value in the Months (Seasonal interest) column. Hidden by default in
+    // the HTML, so adopters with no seasonal data don't see an empty grid.
+    if (trees.some(t => (t['Months (Seasonal interest)'] || '').trim())) {
+      document.getElementById('filter-section-months').style.display = '';
+    }
 
     // Insert "Non-native (hide)" filter after the Native checkbox, and a
     // "Hide self-sown" filter after the Self-sown checkbox.
