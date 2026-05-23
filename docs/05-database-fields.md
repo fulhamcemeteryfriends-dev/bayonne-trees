@@ -73,16 +73,37 @@ throughout the app:
 
 ## Photos
 
-The `Photos` column accepts a comma-separated list of values. Two forms work:
+The `Photos` column accepts a comma-separated list of values. You can mix
+and match **two kinds**:
 
-- **A full URL** — `https://example.com/my-tree.jpg`. Useful if you already
-  host photos somewhere (e.g. Google Photos shared links).
-- **A repo-hosted path** — `photos/t-abc123-1.jpg`. The map resolves this
-  against your repository. Photos uploaded via the *"Add a tree"* form
-  produce values in this form automatically — you don't usually need to type
-  them yourself.
+### Option 1 — Upload a photo via the map
 
-You can mix both kinds in one cell.
+Tap the *+ Add a tree* or *+📷 Add photo* button on the map and pick a
+photo. It's stored in your repository's `photos/` folder and the cell
+automatically gets a reference like `photos/t-abc123-1.jpg`.
+
+### Option 2 — Paste a URL to a photo hosted somewhere else
+
+Just paste any publicly-accessible image URL into the `Photos` cell, for
+example a photo from Flickr, Wikimedia Commons, your group's own
+website, or a Google Photos shared album. The map fetches and displays
+it directly. **No GitHub upload is involved**, so adopters who plan to
+use this method only can skip the `GITHUB_TOKEN` step in
+[docs/03](03-apps-script.md).
+
+> 💡 Using Google Photos? It works, but the photo has to be in a
+> **shared album** for the URL to be public — see
+> [docs/13](13-google-photos.md) for the step-by-step.
+
+### Mixing the two
+
+You can put both kinds in the same cell, comma-separated:
+
+```
+https://lh3.googleusercontent.com/…, photos/t-abc123-1.jpg
+```
+
+The map displays them in the order you list them.
 
 ## "Don't touch these"
 

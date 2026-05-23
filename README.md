@@ -53,6 +53,8 @@ That's it. Your map is live.
   improvements from the original project in one click.
 - **[Trusted contributors](docs/12-trusted-contributors.md)** *(optional)* —
   restrict who can add trees to your map.
+- **[Using Google Photos](docs/13-google-photos.md)** *(optional)* —
+  link to photos hosted in a Google Photos shared album.
 
 ## Credits
 

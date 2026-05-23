@@ -40,6 +40,13 @@ The new tree won't appear on the map immediately — the map only loads from
 the sheet at page-load. Refresh after a few seconds and your tree will be
 there.
 
+> 💡 Prefer to host photos elsewhere (Google Photos, Flickr, your group's
+> website, …)? You can paste any public image URL straight into the
+> `Photos` cell of the spreadsheet — see
+> [docs/05 Photos](05-database-fields.md#photos) for the two-options
+> overview and [docs/13](13-google-photos.md) for the Google Photos
+> specifics.
+
 ## Adding photos to an existing tree
 
 Forgot to attach photos when you first added the tree? Want to add another
