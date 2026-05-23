@@ -114,7 +114,7 @@
       display: flex;
       gap: 6px;
     }
-    .add-tree-btns button, .add-tree-method-row button {
+    .add-tree-btns button {
       font-size: 12px;
       cursor: pointer;
       background: #f5f5f5;
@@ -129,15 +129,11 @@
       white-space: nowrap;
       justify-content: center;
     }
-    .add-tree-btns button:hover, .add-tree-method-row button:hover { background: #e8e8e8; }
+    .add-tree-btns button:hover { background: #e8e8e8; }
     .add-tree-btns button.active { background: #fdecea; border-color: #c0392b; color: #c0392b; }
     #btn-copy-coords svg { flex-shrink: 0; }
     #btn-add-tree-init { background: #e8f4ec; border-color: #5a9e7a; color: #3a6e52; }
     #btn-add-tree-init:hover { background: #d4ecdf; }
-    .add-tree-method-row { display: none; gap: 6px; }
-    .add-tree-method-row.visible { display: flex; }
-    #btn-click-map.active { background: #fff3cd; border-color: #d4a017; color: #7a5c00; }
-    #btn-cancel-add-tree { flex: 0 0 auto; font-weight: bold; color: #888; }
 
     /* Add tree modal */
     #add-tree-backdrop {
@@ -297,6 +293,89 @@
       border: 1px solid #ccc; border-radius: 6px; background: #f5f5f5;
     }
     #add-tree-status { font-size: 12px; color: #666; margin-left: auto; }
+
+    /* ── Picker modal (reusable centred modal / mobile bottom sheet) ─────── */
+    #picker-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      background: rgba(0,0,0,0.4);
+    }
+    #picker-backdrop.open { display: block; }
+    #picker-modal {
+      position: fixed;
+      z-index: 3001;
+      background: white;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+      display: none;
+    }
+    #picker-modal.open { display: block; }
+    @media (min-width: 768px) {
+      #picker-modal {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 10px;
+        width: 360px;
+        max-width: calc(100vw - 32px);
+        padding: 18px 18px 14px;
+      }
+    }
+    @media (max-width: 767px) {
+      #picker-modal {
+        bottom: 0; left: 0; right: 0;
+        border-radius: 14px 14px 0 0;
+        padding: 8px 16px max(20px, env(safe-area-inset-bottom));
+        max-height: 85vh;
+        overflow-y: auto;
+      }
+    }
+    #picker-handle {
+      width: 40px; height: 4px; background: #ddd; border-radius: 2px;
+      margin: 0 auto 12px;
+      display: none;
+    }
+    @media (max-width: 767px) {
+      #picker-handle { display: block; }
+    }
+    #picker-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 12px;
+    }
+    #picker-title {
+      flex: 1; font-size: 15px; color: #1a1a1a; margin: 0;
+    }
+    #picker-close {
+      background: none; border: none; cursor: pointer;
+      font-size: 20px; color: #888; line-height: 1; padding: 4px 8px;
+    }
+    #picker-close:hover { color: #333; }
+    #picker-options {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .picker-option {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; text-align: left;
+      background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .picker-option:hover { background: #ececec; border-color: #ccc; }
+    .picker-option-icon {
+      font-size: 22px; line-height: 1;
+      flex-shrink: 0;
+    }
+    .picker-option-text {
+      display: flex; flex-direction: column; gap: 2px; min-width: 0;
+    }
+    .picker-option-label {
+      font-size: 14px; font-weight: 600; color: #1a1a1a;
+    }
+    .picker-option-hint {
+      font-size: 12px; color: #666; line-height: 1.35;
+    }
 
     /* ── Install banner ──────────────────────────────────────────────────────── */
     .install-banner {
@@ -692,6 +771,16 @@
     <button onclick="welcomeAddFirstTree()">+ Add your first tree</button>
   </div>
 
+  <div id="picker-backdrop" onclick="closePicker()"></div>
+  <div id="picker-modal" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+    <div id="picker-handle"></div>
+    <div id="picker-header">
+      <h3 id="picker-title"></h3>
+      <button id="picker-close" onclick="closePicker()" aria-label="Close">&times;</button>
+    </div>
+    <div id="picker-options"></div>
+  </div>
+
   <button id="panel-toggle" onclick="togglePanel()">&#9658; Filters</button>
 
   <div id="panel">
@@ -772,11 +861,6 @@
           Copy coords
         </button>
         <button id="btn-add-tree-init" onclick="enterMethodSelect()">+ Add a tree</button>
-      </div>
-      <div class="add-tree-method-row" id="add-tree-method-row">
-        <button id="btn-current-location" onclick="useCurrentLocation()">&#128205; Current location</button>
-        <button id="btn-click-map" onclick="handleClickMapBtn()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg> <span id="btn-click-map-label">Click on map</span></button>
-        <button id="btn-cancel-add-tree" onclick="cancelAddTree()" title="Cancel">&#10005;</button>
       </div>
     </div>
   </div>
@@ -1885,46 +1969,99 @@
     if (addMarker) { map.removeLayer(addMarker); addMarker = null; }
   }
 
+  // ── Picker modal (reusable: add-tree method, photo source, …) ───────────────
+  function openPicker({ title, options }) {
+    document.getElementById('picker-title').textContent = title;
+    const list = document.getElementById('picker-options');
+    list.innerHTML = '';
+    options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'picker-option';
+      const icon = document.createElement('span');
+      icon.className = 'picker-option-icon';
+      icon.textContent = opt.icon || '';
+      const text = document.createElement('span');
+      text.className = 'picker-option-text';
+      const label = document.createElement('span');
+      label.className = 'picker-option-label';
+      label.textContent = opt.label;
+      const hint = document.createElement('span');
+      hint.className = 'picker-option-hint';
+      hint.textContent = opt.hint || '';
+      text.appendChild(label);
+      if (opt.hint) text.appendChild(hint);
+      btn.appendChild(icon);
+      btn.appendChild(text);
+      btn.addEventListener('click', () => {
+        closePicker();
+        opt.onPick();
+      });
+      list.appendChild(btn);
+    });
+    document.getElementById('picker-backdrop').classList.add('open');
+    document.getElementById('picker-modal').classList.add('open');
+  }
+
+  function closePicker() {
+    document.getElementById('picker-backdrop').classList.remove('open');
+    document.getElementById('picker-modal').classList.remove('open');
+    if (addTreeState === 'method-select') addTreeState = 'idle';
+  }
+
+  function isPickerOpen() {
+    return document.getElementById('picker-modal').classList.contains('open');
+  }
+
   // ── Add-tree method select ────────────────────────────────────────────────────
   function enterMethodSelect() {
     addTreeState = 'method-select';
-    document.getElementById('add-tree-idle-row').style.display = 'none';
-    document.getElementById('add-tree-method-row').classList.add('visible');
-    document.getElementById('btn-click-map-label').textContent = window.innerWidth <= 767 ? 'Tap on map' : 'Click on map';
-    document.getElementById('btn-click-map').classList.remove('active');
+    openPicker({
+      title: 'How would you like to place this tree?',
+      options: [
+        { icon: '📍', label: 'Current location',
+          hint: "Use your phone's GPS to place the tree where you're standing.",
+          onPick: useCurrentLocation },
+        { icon: '🗺️', label: 'Click on map',
+          hint: (window.innerWidth <= 767 ? 'Tap' : 'Click') + ' anywhere on the map to drop the tree.',
+          onPick: enterClickMapMode }
+      ]
+    });
   }
 
   function cancelAddTree() {
     addTreeState = 'idle';
-    document.getElementById('add-tree-idle-row').style.display = '';
-    document.getElementById('add-tree-method-row').classList.remove('visible');
     document.getElementById('map').classList.remove('add-mode');
-    document.getElementById('btn-click-map').classList.remove('active');
     if (addMarker) { map.removeLayer(addMarker); addMarker = null; }
+    hideClickMapToast();
   }
 
   // ── Click-on-map mode ────────────────────────────────────────────────────────
-  function handleClickMapBtn() {
-    if (addTreeState === 'click-map-mode') {
-      // Cancel click-map mode, go back to method-select
-      addTreeState = 'method-select';
-      document.getElementById('map').classList.remove('add-mode');
-      document.getElementById('btn-click-map').classList.remove('active');
-      document.getElementById('btn-click-map-label').textContent = window.innerWidth <= 767 ? 'Tap on map' : 'Click on map';
-      if (addMarker) { map.removeLayer(addMarker); addMarker = null; }
-      return;
-    }
+  function enterClickMapMode() {
     addTreeState = 'click-map-mode';
     document.getElementById('map').classList.add('add-mode');
-    document.getElementById('btn-click-map').classList.add('active');
-    document.getElementById('btn-click-map-label').textContent = 'Cancel';
     if (window.innerWidth <= 767) {
       const panel = document.getElementById('panel');
       if (panel.classList.contains('open')) togglePanel();
     }
-    showToast('Click or tap on the map to place the new tree');
+    showClickMapToast();
+  }
+
+  // Persistent toast with a Cancel link while click-map-mode is active. Uses
+  // the same #add-toast element but with custom HTML and no auto-dismiss.
+  function showClickMapToast() {
+    const toast = document.getElementById('add-toast');
+    const verb = window.innerWidth <= 767 ? 'Tap' : 'Click';
+    toast.innerHTML = `${verb} on the map to place the new tree &nbsp; <a href="#" id="click-map-cancel" style="color:#fff;text-decoration:underline">Cancel</a>`;
+    toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => document.getElementById('add-toast').classList.remove('show'), 5000);
+    document.getElementById('click-map-cancel').onclick = (e) => { e.preventDefault(); cancelAddTree(); };
+  }
+
+  function hideClickMapToast() {
+    const toast = document.getElementById('add-toast');
+    toast.classList.remove('show');
+    toast.innerHTML = '';
   }
 
   // ── Current location ─────────────────────────────────────────────────────────
@@ -1933,22 +2070,16 @@
       showToast('Geolocation not available on this device');
       return;
     }
-    const btn = document.getElementById('btn-current-location');
-    btn.textContent = 'Getting location…';
-    btn.disabled = true;
     addTreeState = 'getting-location';
+    showToast('Getting location…');
     navigator.geolocation.getCurrentPosition(
       pos => {
-        btn.textContent = '📍 Current location';
-        btn.disabled = false;
         const lat = pos.coords.latitude.toFixed(7);
         const lng = pos.coords.longitude.toFixed(7);
         openAddTreeModal(lat, lng);
       },
       err => {
-        btn.textContent = '📍 Current location';
-        btn.disabled = false;
-        addTreeState = 'method-select';
+        addTreeState = 'idle';
         showToast('Could not get location: ' + (err.message || 'permission denied'));
         clearTimeout(toastTimer);
         toastTimer = setTimeout(() => document.getElementById('add-toast').classList.remove('show'), 4000);
@@ -2019,9 +2150,7 @@
     document.getElementById('btn-more-fields').textContent = '+ More fields\u2026';
     document.getElementById('add-tree-backdrop').classList.add('open');
     document.getElementById('add-tree-modal').classList.add('open');
-    // Hide method row (the modal is shown instead)
-    document.getElementById('add-tree-method-row').classList.remove('visible');
-    document.getElementById('add-tree-idle-row').style.display = 'none';
+    hideClickMapToast();
     setTimeout(() => document.querySelector('#add-tree-form input[name=sci]').focus(), 350);
   }
 
@@ -2038,12 +2167,7 @@
     document.getElementById('add-tree-modal').classList.remove('open');
     document.getElementById('map').classList.remove('add-mode');
     if (addMarker) { map.removeLayer(addMarker); addMarker = null; }
-    // Return to idle
     addTreeState = 'idle';
-    document.getElementById('add-tree-idle-row').style.display = '';
-    document.getElementById('add-tree-method-row').classList.remove('visible');
-    document.getElementById('btn-click-map').classList.remove('active');
-    document.getElementById('btn-click-map-label').textContent = window.innerWidth <= 767 ? 'Tap on map' : 'Click on map';
   }
 
   // ── Photo capture & upload ────────────────────────────────────────────────────
@@ -2229,9 +2353,10 @@
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
+    if (isPickerOpen())                { closePicker(); return; }
     if (addTreeState === 'modal-open') { closeAddTreeModal(); return; }
-    if (addTreeState === 'copy-mode') { exitCopyMode(); return; }
-    if (addTreeState === 'click-map-mode' || addTreeState === 'method-select') { cancelAddTree(); return; }
+    if (addTreeState === 'copy-mode')  { exitCopyMode(); return; }
+    if (addTreeState === 'click-map-mode') { cancelAddTree(); return; }
   });
 
   // ── USER LOCATION ────────────────────────────────────────────────────────────

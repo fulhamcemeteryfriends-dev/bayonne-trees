@@ -13,13 +13,15 @@ Both are fine. Both feed the same sheet.
 
 1. Open your map (`https://your-username.github.io/your-repo/`).
 2. Click **"+ Add a tree"** in the filter panel (or on the welcome card if
-   the sheet is empty).
-3. Choose how to place the tree:
+   the sheet is empty). A small dialog appears with two ways to place the
+   tree:
    - **📍 Current location** — uses your phone's GPS. Best when standing
      next to the tree.
-   - **Click on map** — places the tree where you click. Switch to
-     *Satellite* in the bottom-left layer control to see the canopy and place
-     accurately.
+   - **🗺️ Click on map** — places the tree wherever you tap. A reminder
+     bar at the bottom of the screen tells you what to do next; tap
+     **Cancel** there if you change your mind. Tip: switch to
+     *Satellite* in the bottom-left layer control to see the canopy and
+     place accurately.
 4. Fill in the form. **Scientific name** is the most important field; the
    rest are optional and can be added later.
 5. Optionally attach up to **4 photos**. Two ways:
