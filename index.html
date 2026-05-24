@@ -1427,8 +1427,13 @@
 
     let html = `<div class="tree-popup">`;
     const treeRef = (tree['Ref'] || '').replace(/'/g, '\\\'');
+    // Header uses Scientific name when set, then falls back to Common name,
+    // then to "(unknown)" if neither is provided.
+    const sciVal     = tree['Scientific name'];
+    const comVal     = tree['Common name'];
+    const headerText = sciVal || comVal || '(unknown)';
     html += `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">` +
-      `<h4 style="margin-bottom:0">${esc(tree['Scientific name'] || '(unknown)')}</h4>` +
+      `<h4 style="margin-bottom:0">${esc(headerText)}</h4>` +
       `<button onclick="copyTreeLink('${treeRef}')" title="Copy link to this tree" style="flex-shrink:0;background:none;border:none;padding:0;cursor:pointer;color:#2a7ae2;display:flex;align-items:center">` +
         `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>` +
       `</button>` +
@@ -1450,7 +1455,9 @@
       }
       html += `</div>`;
     }
-    html += row('Common name',      tree['Common name']);
+    // Only show Common name as a row if it isn't already serving as the
+    // header (i.e. when Scientific name was present to be the header).
+    if (sciVal) html += row('Common name', comVal);
     html += row('Other names',      tree['Other names']);
     html += row('Year planted',     tree['Year planted'],     tree['Year planted']     ? ageSuffix : '');
     html += row('Est. year planted',tree['Est. year planted'],tree['Est. year planted'] ? ageSuffix : '');
@@ -1871,7 +1878,33 @@
     })
   };
 
-  const map = L.map('map').setView(MAP_CENTER, MAP_ZOOM);
+  // Cache the last-fitted view in localStorage so repeat visits open right
+  // where the trees actually are, avoiding a jarring flash from MAP_CENTER
+  // (which is a placeholder until adopters update it).
+  const VIEW_CACHE_KEY = 'parktreemap_last_view';
+  function readCachedView() {
+    try {
+      const raw = localStorage.getItem(VIEW_CACHE_KEY);
+      if (!raw) return null;
+      const v = JSON.parse(raw);
+      if (Array.isArray(v.center) && v.center.length === 2 && typeof v.zoom === 'number') return v;
+    } catch (e) {}
+    return null;
+  }
+  function writeCachedView() {
+    try {
+      const c = map.getCenter();
+      localStorage.setItem(VIEW_CACHE_KEY, JSON.stringify({
+        center: [c.lat, c.lng],
+        zoom: map.getZoom()
+      }));
+    } catch (e) {}
+  }
+  const cachedView = readCachedView();
+  const map = L.map('map').setView(
+    cachedView ? cachedView.center : MAP_CENTER,
+    cachedView ? cachedView.zoom   : MAP_ZOOM
+  );
   baseLayers['Street map'].addTo(map);
   L.control.layers(baseLayers, null, { position: 'bottomleft' }).addTo(map);
 
@@ -1952,6 +1985,7 @@
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [24, 24] });
       hideWelcomeOverlay();
+      writeCachedView();
     } else {
       map.setView(MAP_CENTER, MAP_ZOOM);
       showWelcomeOverlay();
@@ -2696,9 +2730,14 @@
       });
       status.textContent = 'Submitted! Thank you.';
       if (pendingAddMarker) map.removeLayer(pendingAddMarker);
-      pendingAddMarker = L.marker([parseFloat(lat), parseFloat(lng)], {
+      const newLat = parseFloat(lat);
+      const newLng = parseFloat(lng);
+      pendingAddMarker = L.marker([newLat, newLng], {
         icon: pendingTreeIcon, interactive: false
       }).addTo(map).bindTooltip('Pending: ' + (payload.sci || 'New tree'), { permanent: false });
+      // Pan/zoom to the new tree so the adopter sees it, especially when the
+      // first tree drops them away from the placeholder fallback view.
+      map.flyTo([newLat, newLng], Math.max(map.getZoom(), 18), { duration: 1.0 });
       setTimeout(() => closeAddTreeModal(), 1800);
     } catch (err) {
       status.textContent = 'Error submitting. Please try again.';
