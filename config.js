@@ -10,8 +10,8 @@
 // — Your park —
 // PARK_NAME is just the park's name (e.g. 'Lillie Park'). The app appends
 // " tree map" where it needs the full title.
-const PARK_NAME        = 'Bayonne Park';
-const PARK_DESCRIPTION = 'Also known as Bayonne Road open space, it lies between the Bayonne Road estate and Greyhound Road. Created during the 1980s after a resident-led campaign.';
+const PARK_NAME        = 'My Park';
+const PARK_DESCRIPTION = 'A short sentence about your park and your group — shown in the Info panel.';
 // Optional. Leave as '' to hide the email contact from the Info panel
 // and the feedback "Send email instead" link.
 const CONTACT_EMAIL    = '';
