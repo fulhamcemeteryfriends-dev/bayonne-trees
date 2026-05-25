@@ -609,7 +609,8 @@
     .feedback-form .feedback-actions { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
     .feedback-form button { font-size: 12px; padding: 3px 10px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px; background: #f5f5f5; }
     .feedback-form button:hover { background: #e8e8e8; }
-    .feedback-status { font-size: 11px; color: #555; }
+    .feedback-status { font-size: 11px; color: #555; margin-top: 6px; }
+    .feedback-status:empty { display: none; }
     .tree-popup .photos { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
     .tree-popup .photos a { display: block; flex: 1 1 calc(50% - 4px); cursor: zoom-in; }
     .tree-popup .photos img { width: 100%; height: 100px; object-fit: cover; border-radius: 3px; display: block; }
@@ -772,6 +773,7 @@
     .map-header-info svg { display: block; }
     @media (max-width: 767px) {
       .map-header { max-width: calc(100vw - 20px); font-size: 13px; }
+      body.panel-open .map-header { display: none; }
     }
 
     /* ── Info modal (centred desktop / bottom sheet mobile) ── */
@@ -910,7 +912,8 @@
     <img id="info-icon" src="icons/icon-192.png" alt="" />
     <h2 id="info-title"></h2>
     <p id="info-description"></p>
-    <div class="info-row">Contact: <a id="info-contact" href="#"></a></div>
+    <div class="info-row" id="info-website-row">Website: <a id="info-website" href="#" target="_blank" rel="noopener"></a></div>
+    <div class="info-row" id="info-contact-row">Contact: <a id="info-contact" href="#"></a></div>
     <div id="info-attribution">
       Built with <a href="https://github.com/fjordaan/park-treemap" target="_blank" rel="noopener">park-treemap</a> — a free, self-hosted tree-map template for any park's "Friends of" group.
     </div>
@@ -975,22 +978,22 @@
       <div class="month-grid" id="filter-months"></div>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section" id="filter-section-new-tags" style="display:none">
       <span class="filter-label">New trees</span>
       <div class="checkbox-group" id="filter-new-tags"></div>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section" id="filter-section-tags" style="display:none">
       <span class="filter-label">Tags</span>
       <div class="checkbox-group" id="filter-tags"></div>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section" id="filter-section-conditions" style="display:none">
       <span class="filter-label">Condition</span>
       <div class="checkbox-group" id="filter-conditions"></div>
     </div>
 
-    <div class="filter-section">
+    <div class="filter-section" id="filter-section-forms" style="display:none">
       <span class="filter-label">Form</span>
       <div class="checkbox-group" id="filter-forms"></div>
     </div>
@@ -1046,9 +1049,9 @@
     <textarea rows="4" placeholder="Your comment about this tree…"></textarea>
     <div class="feedback-actions">
       <button onclick="submitFeedbackSheet()">Send</button>
-      <span class="feedback-status"></span>
       <a id="feedback-sheet-mailto" href="#" style="margin-left:auto;font-size:11px;color:#2a7ae2;text-decoration:none;white-space:nowrap;">&#9993; Send email instead</a>
     </div>
+    <div class="feedback-status"></div>
   </div>
 
   <div id="add-tree-backdrop" onclick="closeAddTreeModal()"></div>
@@ -1203,10 +1206,28 @@
   function populateInfoModal() {
     const titleEl = document.getElementById('info-title');
     const descEl  = document.getElementById('info-description');
-    const cEl     = document.getElementById('info-contact');
     if (titleEl) titleEl.textContent = APP_TITLE;
     if (descEl)  descEl.textContent  = PARK_DESCRIPTION;
-    if (cEl)     { cEl.textContent = CONTACT_EMAIL; cEl.href = `mailto:${CONTACT_EMAIL}`; }
+
+    // Website row (optional)
+    const wEl  = document.getElementById('info-website');
+    const wRow = document.getElementById('info-website-row');
+    if (WEBSITE_URL) {
+      if (wEl)  { wEl.textContent = WEBSITE_URL.replace(/^https?:\/\//, '').replace(/\/$/, ''); wEl.href = WEBSITE_URL; }
+      if (wRow) wRow.style.display = '';
+    } else {
+      if (wRow) wRow.style.display = 'none';
+    }
+
+    // Contact row (optional)
+    const cEl  = document.getElementById('info-contact');
+    const cRow = document.getElementById('info-contact-row');
+    if (CONTACT_EMAIL) {
+      if (cEl)  { cEl.textContent = CONTACT_EMAIL; cEl.href = `mailto:${CONTACT_EMAIL}`; }
+      if (cRow) cRow.style.display = '';
+    } else {
+      if (cRow) cRow.style.display = 'none';
+    }
   }
 
   function openInfoModal() {
@@ -1493,16 +1514,18 @@
     const formId = `ff-${ref.replace(/\./g, '-')}`;
     const sciName = (tree['Scientific name'] || '').replace(/'/g, '&#39;');
     const mailSubject = encodeURIComponent(`Feedback on tree ${ref} (${tree['Scientific name'] || ''})`);
-    const mailtoHref = `mailto:${CONTACT_EMAIL}?subject=${mailSubject}`;
+    const mailtoLink = CONTACT_EMAIL
+      ? `<a href="mailto:${CONTACT_EMAIL}?subject=${mailSubject}" style="margin-left:auto;font-size:11px;color:#2a7ae2;text-decoration:none;white-space:nowrap;">&#9993; Send email instead</a>`
+      : '';
     const feedback = `<a class="feedback-link" href="#" onclick="toggleFeedbackForm('${formId}'); return false;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Feedback</a>`;
     html += `<div class="links"><span>${links.join(' &bull; ')}</span>${feedback}</div>`;
     html += `<div class="feedback-form" id="${formId}" data-ref="${ref}" data-tree="${sciName}">
       <textarea rows="3" placeholder="Your comment about this tree…"></textarea>
       <div class="feedback-actions">
         <button onclick="submitFeedback('${ref}', this.closest('.feedback-form'))">Send</button>
-        <span class="feedback-status"></span>
-        <a href="${mailtoHref}" style="margin-left:auto;font-size:11px;color:#2a7ae2;text-decoration:none;white-space:nowrap;">&#9993; Send email instead</a>
+        ${mailtoLink}
       </div>
+      <div class="feedback-status"></div>
     </div>`;
 
     html += '</div>';
@@ -1586,12 +1609,17 @@
     fillCheckboxes('filter-conditions', condBuckets,   'filter-condition');
     fillCheckboxes('filter-forms',      formBuckets,   'filter-form');
 
-    // Show the Seasonal interest filter only if at least one tree has a
-    // value in the Months (Seasonal interest) column. Hidden by default in
-    // the HTML, so adopters with no seasonal data don't see an empty grid.
-    if (trees.some(t => (t['Months (Seasonal interest)'] || '').trim())) {
-      document.getElementById('filter-section-months').style.display = '';
-    }
+    // Reveal filter sections only when their underlying column has any
+    // content — adopters with no Tags/Condition/Form data yet don't see
+    // empty filter groups. All sections are hidden by default in the HTML.
+    const showIf = (sectionId, hasContent) => {
+      if (hasContent) document.getElementById(sectionId).style.display = '';
+    };
+    showIf('filter-section-months',     trees.some(t => (t['Months (Seasonal interest)'] || '').trim()));
+    showIf('filter-section-new-tags',   Object.keys(newTagBuckets).length > 0);
+    showIf('filter-section-tags',       Object.keys(tagBuckets).length    > 0);
+    showIf('filter-section-conditions', Object.keys(condBuckets).length   > 0);
+    showIf('filter-section-forms',      Object.keys(formBuckets).length   > 0);
 
     // Insert "Non-native (hide)" filter after the Native checkbox, and a
     // "Hide self-sown" filter after the Self-sown checkbox.
@@ -1815,6 +1843,7 @@
     toggle.classList.toggle('collapsed', !open);
     toggle.textContent = open ? '\u25b6 Filters' : '\u25c0 Filters';
     document.getElementById('map-dim').classList.toggle('active', open);
+    document.body.classList.toggle('panel-open', open);
   }
 
   // \u2500\u2500 WELCOME OVERLAY (empty-state) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -2133,8 +2162,13 @@
     sheet.querySelector('textarea').value = '';
     sheet.querySelector('.feedback-status').textContent = '';
     const mailSubject = encodeURIComponent(`Feedback on tree ${ref} (${sciName})`);
-    document.getElementById('feedback-sheet-mailto').href =
-      `mailto:${CONTACT_EMAIL}?subject=${mailSubject}`;
+    const mailtoEl = document.getElementById('feedback-sheet-mailto');
+    if (CONTACT_EMAIL) {
+      mailtoEl.href = `mailto:${CONTACT_EMAIL}?subject=${mailSubject}`;
+      mailtoEl.style.display = '';
+    } else {
+      mailtoEl.style.display = 'none';
+    }
     document.getElementById('feedback-backdrop').classList.add('open');
     sheet.classList.add('open');
     setTimeout(() => sheet.querySelector('textarea').focus(), 320);
