@@ -615,8 +615,26 @@
     .feedback-status { font-size: 11px; color: #555; margin-top: 6px; }
     .feedback-status:empty { display: none; }
     .tree-popup .photos { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
-    .tree-popup .photos a { display: block; flex: 1 1 calc(50% - 4px); cursor: zoom-in; }
+    .tree-popup .photo-thumb-wrap { position: relative; flex: 1 1 calc(50% - 4px); }
+    .tree-popup .photo-thumb-link { display: block; cursor: zoom-in; }
     .tree-popup .photos img { width: 100%; height: 100px; object-fit: cover; border-radius: 3px; display: block; }
+    .tree-popup .photo-delete {
+      position: absolute;
+      top: 4px; right: 4px;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .tree-popup .photo-delete:hover {
+      opacity: 1;
+      background: rgba(192, 57, 43, 0.9);
+    }
+    .tree-popup .photo-delete svg { display: block; }
     .tree-popup .photo-add-slot {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 4px;
@@ -1433,6 +1451,16 @@
     return GITHUB_PHOTOS_BASE_URL + rel;
   }
 
+  // For a repo-hosted photo, build the GitHub "delete file" URL that takes
+  // an enrolled contributor straight to the confirmation page on GitHub.
+  // Returns null for external URLs (Google Photos etc.) — those can only be
+  // removed at their original host.
+  function repoPhotoDeleteUrl(raw) {
+    if (!raw || /^https?:\/\//i.test(raw)) return null;
+    const rel = raw.replace(/^\/+/, '').replace(/^photos\//, '');
+    return `https://github.com/${GITHUB_REPO}/delete/${GITHUB_BRANCH}/photos/${rel}`;
+  }
+
   function parsePhotos(photoStr) {
     if (!photoStr) return [];
     return photoStr.split(',').map(s => s.trim()).filter(Boolean);
@@ -1484,7 +1512,11 @@
       const resolvedAttr = JSON.stringify(resolvedPhotos).replace(/"/g, '&quot;');
       photos.forEach((raw, i) => {
         const thumb = resolvePhotoUrl(raw, 'w280');
-        html += `<a href="#" data-photos="${resolvedAttr}" data-index="${i}" onclick="openLightbox(JSON.parse(this.dataset.photos), +this.dataset.index); return false;"><img src="${thumb}" loading="lazy" referrerpolicy="no-referrer" alt="Tree photo"/></a>`;
+        const deleteUrl = canContribute() ? repoPhotoDeleteUrl(raw) : null;
+        const deleteOverlay = deleteUrl
+          ? `<a class="photo-delete" href="${esc(deleteUrl)}" target="_blank" rel="noopener" title="Delete this photo on GitHub" onclick="event.stopPropagation();"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></a>`
+          : '';
+        html += `<div class="photo-thumb-wrap"><a class="photo-thumb-link" href="#" data-photos="${resolvedAttr}" data-index="${i}" onclick="openLightbox(JSON.parse(this.dataset.photos), +this.dataset.index); return false;"><img src="${thumb}" loading="lazy" referrerpolicy="no-referrer" alt="Tree photo"/></a>${deleteOverlay}</div>`;
       });
       if (canAddPhoto) {
         const refAttr = (tree['Ref'] || '').replace(/'/g, '\\\'');
