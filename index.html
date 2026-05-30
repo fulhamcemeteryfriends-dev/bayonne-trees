@@ -475,6 +475,14 @@
     #hover-label .lbl-sci { display: block; font-size: 16px; font-style: italic; font-weight: 600; color: #1a1a1a; line-height: 1.4; }
     #hover-label .lbl-com { display: block; font-size: 13px; color: #555; line-height: 1.4; }
     @media (max-width: 767px) { #hover-label { display: none !important; } }
+    .tree-label {
+      background: none; border: none; box-shadow: none; padding: 0;
+      pointer-events: none; white-space: nowrap;
+      font-size: 12px; font-weight: 600; color: #1a1a1a;
+      text-shadow: 0 0 3px white, 0 0 3px white, 0 0 3px white;
+      line-height: 1.3;
+    }
+    .tree-label::before { display: none; }
 
     .section-label {
       background: none;
@@ -1037,6 +1045,10 @@
         <label class="checkbox-item">
           <input type="checkbox" id="filter-no-photo" onchange="applyFilters()">
           Lacks photo
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="filter-show-labels" onchange="updateLabels()">
+          Show labels
         </label>
       </div>
     </div>
@@ -1824,10 +1836,31 @@
         count++;
       } else {
         if (map.hasLayer(marker)) marker.remove();
+        const tooltip = marker.getTooltip();
+        if (tooltip && tooltip.isOpen()) marker.closeTooltip();
       }
     });
     document.getElementById('tree-count').textContent =
       `${count} tree${count !== 1 ? 's' : ''} shown`;
+    updateLabels();
+  }
+
+  function updateLabels() {
+    const bounds = map.getBounds();
+    let inView = 0;
+    markers.forEach((marker) => {
+      if (map.hasLayer(marker) && bounds.contains(marker.getLatLng())) inView++;
+    });
+    const labelThreshold = window.innerWidth <= 767 ? 20 : 80;
+    const showLabels = document.getElementById('filter-show-labels').checked &&
+                       (map.getZoom() >= 19 || inView < labelThreshold);
+    markers.forEach((marker) => {
+      if (!map.hasLayer(marker)) return;
+      const tooltip = marker.getTooltip();
+      if (!tooltip) return;
+      if (showLabels && !tooltip.isOpen()) marker.openTooltip();
+      else if (!showLabels && tooltip.isOpen()) marker.closeTooltip();
+    });
   }
 
   function buildFilterUrl() {
@@ -1848,6 +1881,7 @@
     if (document.getElementById('filter-no-photo').checked)  params.set('nophoto',  '1');
     if (document.getElementById('filter-hide-self-sown')?.checked) params.set('hidesselfsown', '1');
     if (document.getElementById('filter-non-native')?.checked) params.set('nonnative', '1');
+    if (document.getElementById('filter-show-labels').checked) params.set('showlabels', '1');
     const month = getSelectedMonth();
     if (month) params.set('month', month);
     if (map.hasLayer(baseLayers['Satellite'])) params.set('satellite', '1');
@@ -1901,7 +1935,8 @@
       const cb = document.querySelector(`#filter-months input[value="${params.get('month')}"]`);
       if (cb) { cb.checked = true; cb.closest('.month-btn').classList.add('selected'); }
     }
-    if (params.get('satellite') === '1') { baseLayers['Street map'].remove(); baseLayers['Satellite'].addTo(map); }
+    if (params.get('satellite')   === '1') { baseLayers['Street map'].remove(); baseLayers['Satellite'].addTo(map); }
+    if (params.get('showlabels') === '1') document.getElementById('filter-show-labels').checked = true;
     applyFilters();
   }
 
@@ -2078,7 +2113,9 @@
       marker.bindPopup(buildPopup(tree), { maxWidth: 320 });
       const sci = tree['Scientific name'] || '';
       const com = tree['Common name'] || '';
+      const short = tree['Short name'] || sci;
       const labelHtml = `<span class="lbl-sci">${sci}</span>${com ? `<span class="lbl-com">${com}</span>` : ''}`;
+      marker.bindTooltip(short, { permanent: true, direction: 'right', className: 'tree-label', opacity: 1, offset: [8, 0] });
       marker.on('mouseover', () => {
         const el = document.getElementById('hover-label');
         el.innerHTML = labelHtml;
@@ -2103,6 +2140,7 @@
 
     buildFilters(trees);
     applyUrlFilters();
+    updateLabels();
 
     // Open popup for a specific tree if ?ref= is in the URL
     const refParam = new URLSearchParams(window.location.search).get('ref');
@@ -2276,6 +2314,7 @@
   map.on('popupopen',  () => document.body.classList.add('popup-open'));
   map.on('popupclose', () => document.body.classList.remove('popup-open'));
   map.on('popupclose', closeFeedbackSheet);
+  map.on('zoomend moveend', updateLabels);
 
   // ── INSTALL BANNER ───────────────────────────────────────────────────────────
   let deferredPrompt = null;
